@@ -1,0 +1,118 @@
+#include <Servo.h>
+// membuat nama objek servo untuk pengontrolan servo 
+Servo myservo;          
+// variable
+int pos = 0;
+int trig= 11;            // membuat varibel trig yang di set ke-pin 3
+int echo= 12;            // membuat variabel echo yang di set ke-pin 2 
+long durasi;             // membuat variabel durasi
+int jarak;               // membuat variabel jarak
+int pinSpeaker= 8;       // membuat variabel Buzzer yang di set ke-pin 8
+
+#define waktutunda 5
+
+unsigned long now = millis();
+unsigned long TriggerAkhir = 0;
+boolean waktumulai = false;
+
+//variable led
+const int ledPin1 = 7;
+const int ledPin2 = 4; 
+// varibale sensor pir
+const int SensorPir = 2;
+
+void setup() {
+  pinMode(trig, OUTPUT);    // set pin trig menjadi OUTPUT
+  pinMode(echo, INPUT);     // set pin echo menjadi INPUT
+  pinMode(pinSpeaker, OUTPUT);  // set pin buzzer menjadi OUTPUT
+  Serial.begin(9600);       // digunakan untuk komunikasi Serial dengan komputer
+  myservo.attach(9);        // objek servo diletakan pada pin 9 
+  
+   //komunikasi serial antar monitor
+  pinMode(SensorPir, INPUT_PULLUP);
+  attachInterrupt(digitalPinToInterrupt(SensorPir), \
+  deteksigerakan, RISING);
+  
+  pinMode(ledPin1, OUTPUT);
+  digitalWrite(ledPin1, LOW);
+  
+  pinMode(ledPin2, OUTPUT);
+  digitalWrite(ledPin2, LOW);
+}
+
+void loop() {
+ //deteksi  tidak ada gerakan 
+  now = millis();
+  if(waktumulai && (now-TriggerAkhir>(waktutunda * 1000))){
+  	digitalWrite(ledPin1, LOW);
+    digitalWrite(ledPin2, LOW);
+    waktumulai = false;
+  } 
+  // start dari 0 derajar sampai 180 derajat 
+ for(pos = 0; pos < 180; pos += 1)  
+ {
+  // pada posisi 1 derajat
+  // memberitahu servo untuk pergi ke posisi  'pos'
+  myservo.write(pos);
+  // tunggu 50ms untuk pencapaian  posisi servo    
+  delay(50);
+  jarak = calculateDistance();    // mencatat jarak
+  if(jarak <= 10)                 // Ketika ada objek musuh mendekat dengan jarak kurang dari 10 cm dari Sensor Ultrasonik maka Buzzer akan menyala
+  {
+    digitalWrite(pinSpeaker, HIGH);
+  }else{
+    digitalWrite(pinSpeaker, LOW);
+  }
+ } 
+ // start dari 180 derajat ke 0 derajat 
+ for(pos = 180; pos>=1; pos-=1)  
+ {
+  // memberitahu servo untuk pergi ke posisi  'pos'                                
+  myservo.write(pos);                 
+  // tunggu 50ms untuk pencapaian  posisi servo    
+  delay(50);
+  jarak = calculateDistance();    // mencatat jarak          
+  if(jarak <= 10)                 // Ketika ada objek musuh mendekat dengan jarak kurang dari 10 cm dari Sensor Ultrasonik maka Buzzer akan menyala
+  {
+    digitalWrite(pinSpeaker, HIGH);
+  }else{
+    digitalWrite(pinSpeaker, LOW);
+  } 
+ }
+}
+
+void playTone(long duration, int freq) {
+    duration *= 1000;
+    int period = (1.0 / freq) * 1000000;
+    long elapsed_time = 0;
+    while (elapsed_time < duration) {
+        digitalWrite(pinSpeaker,HIGH);
+        delayMicroseconds(period / 2);
+        digitalWrite(pinSpeaker, LOW);
+        delayMicroseconds(period / 2);
+        elapsed_time += (period);
+    }
+}
+
+int calculateDistance(){
+  // program dibawah ini agar trigger memancarakan suara ultrasonic
+  digitalWrite(trig, LOW);
+  delayMicroseconds(2);
+  digitalWrite(trig, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(trig, LOW);
+  delayMicroseconds(8);
+  
+  durasi= pulseIn(echo, HIGH);  // menerima suara ultrasonic
+  jarak= (durasi/2) / 29.1;     // mengubah durasi menjadi jarak (cm)
+  Serial.println(jarak);        // menampilkan jarak pada Serial Monitor
+}
+
+
+void deteksigerakan(){
+  //Serial.println("Gerakan Terdeteksi");
+  digitalWrite(ledPin1, HIGH);
+  digitalWrite(ledPin2, HIGH);
+  waktumulai = true;
+  TriggerAkhir = millis();
+}
